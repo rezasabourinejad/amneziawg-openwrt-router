@@ -1,0 +1,40 @@
+# /etc/amneziawg/awg1.conf  (format of `awg setconf`)
+# Address / DNS / MTU lines are NOT allowed here; they live in /etc/amneziawg/awg3.env.
+#
+# Take the client config the Amnezia server/app generated for this peer and copy:
+#   - [Interface] PrivateKey
+#   - EVERY obfuscation line from the server's [Interface] exactly (Jc..H4, S3/S4, I1-I5,
+#     HeaderProtectionKey, ContentPaddingAddition, RandomTrailers, ...). One mismatch = no handshake.
+#   - the whole [Peer] section.
+[Interface]
+# A fixed source port. Some ISPs hash their upstream choice per flow (source port included);
+# pinning it stops every restart from re-rolling the route. See README "Pinned ListenPort".
+ListenPort = 40008
+PrivateKey = <CLIENT_PRIVATE_KEY>
+Jc = 5
+Jmin = 10
+Jmax = 50
+S1 = <S1>
+S2 = <S2>
+S3 = <S3>
+S4 = <S4>
+H1 = <H1>
+H2 = <H2>
+H3 = <H3>
+H4 = <H4>
+HeaderProtectionKey = <SERVER_HEADER_PROTECTION_KEY>
+ContentPaddingAddition = 10-100
+RekeyAfterTime = 100-120
+RekeyTimeout = 3-7
+RejectAfterTime = 150-180
+KeepaliveTimeout = 5-15
+MaxHandshakeAttempts = 15-20
+RandomTrailers = on
+DisableCookies = on
+
+[Peer]
+PublicKey = <SERVER_PUBLIC_KEY>
+PresharedKey = <PRESHARED_KEY>
+Endpoint = <SERVER_IP>:<SERVER_PORT>
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25

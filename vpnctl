@@ -1,0 +1,40 @@
+#!/bin/bash
+# vpnctl — control the router's AmneziaWG tunnel from your laptop.
+#   vpnctl on | off | restart | status
+# Settings: env vars, or a file "vpnctl.env" next to this script, e.g.
+#   ROUTER=root@192.168.1.1
+#   SSH_KEY=~/.ssh/id_ed25519
+HERE=$(cd "$(dirname "$(readlink "$0" || echo "$0")")" && pwd)
+[ -f "$HERE/vpnctl.env" ] && . "$HERE/vpnctl.env"
+ROUTER=${ROUTER:-root@192.168.1.1}
+OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=6 -o LogLevel=ERROR)
+[ -n "$SSH_KEY" ] && OPTS+=(-i "${SSH_KEY/#\~/$HOME}")
+r() { ssh "${OPTS[@]}" "$ROUTER" "$@"; }
+die() { echo "✗ $1" >&2; exit 1; }
+
+case "$1" in
+on|start|restart)
+    r '/etc/init.d/amneziawg3 restart' || die "router not reachable ($ROUTER)"
+    sleep 3
+    AGE=$(r 'HS=$(awg show awg1 latest-handshakes 2>/dev/null | awk "{print \$2}"); [ -n "$HS" ] && [ "$HS" != 0 ] && echo $(( $(date +%s) - HS ))')
+    if [ -n "$AGE" ] && [ "$AGE" -lt 30 ]; then echo "✓ VPN on — handshake ${AGE}s ago"
+    else echo "! service started but no fresh handshake yet; run: vpnctl status"; fi ;;
+off|stop)
+    r '/etc/init.d/amneziawg3 stop' || die "router not reachable ($ROUTER)"
+    echo "■ VPN off — whole network goes direct" ;;
+status)
+    OUT=$(r 'if ip link show awg1 >/dev/null 2>&1; then
+               HS=$(awg show awg1 latest-handshakes | awk "{print \$2}"); NOW=$(date +%s)
+               set -- $(awg show awg1 transfer | awk "{print \$2, \$3}")
+               AGE=-1; [ -n "$HS" ] && [ "$HS" != 0 ] && AGE=$((NOW-HS))
+               echo "UP $AGE $(( $1/1048576 )) $(( $2/1048576 )) $(ip rule | grep -c "lookup 110") $(ip route show table 110 | grep -c throw) $(awg show awg1 listen-port)"
+             else echo DOWN; fi') || die "router not reachable ($ROUTER)"
+    set -- $OUT
+    [ "$1" = DOWN ] && { echo "■ VPN off — direct internet"; exit 0; }
+    if [ "$2" -ge 0 ] && [ "$2" -le 180 ]; then echo "✓ VPN on (handshake $2s ago)"; else echo "! interface up but no recent handshake — check server / internet"; fi
+    echo "  tunnel traffic: rx ${3} MB / tx ${4} MB, listen port $7"
+    [ "$5" -ge 1 ] && echo "  LAN -> tunnel rule: active" || echo "  ! LAN routing rule missing"
+    echo "  bypass routes (direct): $6"
+    IP=$(curl -s -m 8 https://api.ipify.org); [ -n "$IP" ] && echo "  this machine's public IP: $IP" ;;
+*) echo "usage: vpnctl on | off | restart | status"; exit 1 ;;
+esac

@@ -1,0 +1,10 @@
+09ca04ea129e7ef34ec957a8ba917058bf6592af57bc27ee8e50de7950a88fdd  amneziawg-tools_3.1.20260812-1_arm_cortex-a7_neon-vfpv4.ipk
+0f78324169875f5aa1596801d2d76c7fe11ab54df32139027be766c9b764fd79  kmod-amneziawg_5.15.162+3.1.20260906-1_arm_cortex-a7_neon-vfpv4.ipk
+53991d54a8f4701d3edfdf228de63bfe00fcc7798ced347715b62e02ba138648  deps/kmod-crypto-hash_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk
+522271a5d21fdcca53cc9418815519b96f083d95f8f9770a21132461fcaf3514  deps/kmod-crypto-kpp_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk
+12fab048dddee9aba72bf4f0d06e6f1c1d0f883bbd5bd679dcfdd2e150cc03bb  deps/kmod-crypto-lib-chacha20_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk
+850d2faa290a0b53cae3535fa77f1403c8b94ef41afd3bfedafd0a45f900991d  deps/kmod-crypto-lib-chacha20poly1305_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk
+a46d87deb6a9db0007b6c2e9e471d8b110dea03f2edd3cabced589e20f055910  deps/kmod-crypto-lib-curve25519_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk
+0cabacdc493ada27643ea1b4c49c8399e754810e031400e4ca49c143a7637d20  deps/kmod-crypto-lib-poly1305_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk
+9df55343db551072b9b4e8dc30f0150d4424055c33fbc30b9d388419406c77a6  deps/kmod-udptunnel4_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk
+4987fdb02847f55bb46f31092c816305d6748b72925d0e53cd47c7a26ee8aac1  deps/kmod-udptunnel6_5.15.162-1_arm_cortex-a7_neon-vfpv4.ipk

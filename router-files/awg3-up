@@ -1,0 +1,50 @@
+#!/bin/sh
+# Bring up the AmneziaWG 3.1 tunnel (kernel module). Called by /etc/init.d/amneziawg3.
+#
+# Routing model (policy routing, no firewall marks):
+#   ip rule: everything arriving from the LAN bridge -> table $TABLE
+#   table $TABLE: default via the tunnel, plus "throw" routes for BYPASS prefixes
+#   A "throw" makes the lookup fall through to the main table, so those destinations
+#   leave via WAN directly. It is a plain FIB lookup: no marks, no conntrack, no CPU cost.
+#
+# The router's own dnsmasq upstreams (DNS_SERVERS) are host-routed through the tunnel so
+# LAN clients get unpoisoned DNS. When the tunnel goes down these /32 routes disappear
+# with the interface and DNS silently falls back to the direct WAN path (no lock-out).
+#
+# Defaults below can be overridden in /etc/amneziawg/awg3.env (plain "KEY=value" lines).
+
+IFACE=awg1
+CONF=/etc/amneziawg/awg1.conf
+ADDR=10.8.1.2/32              # your tunnel address (Address= in the client config from the server)
+TUNNEL_NET=10.8.1.0/24        # server-side tunnel subnet
+MTU=1256                      # AWG 3.1 adds variable padding; 1256 is a safe value, see README
+LAN_IF=br-lan
+TABLE=110
+PRIO=15110
+DNS_SERVERS="1.1.1.1 1.0.0.1" # must match the dnsmasq upstreams (install.sh sets them)
+BYPASS="/etc/amneziawg/bypass-v4.txt /etc/amneziawg/bypass-extra.txt"
+BYPASS_ALWAYS="10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10"
+
+[ -f /etc/amneziawg/awg3.env ] && . /etc/amneziawg/awg3.env
+
+ip link add "$IFACE" type amneziawg 2>/dev/null
+awg setconf "$IFACE" "$CONF" || exit 1
+ip addr replace "$ADDR" dev "$IFACE"
+ip link set "$IFACE" up mtu "$MTU"
+ip route replace "$TUNNEL_NET" dev "$IFACE"
+
+ip route flush table "$TABLE"
+ip route replace default dev "$IFACE" table "$TABLE"
+{
+  for p in $BYPASS_ALWAYS; do echo "route replace throw $p table $TABLE"; done
+  for f in $BYPASS; do
+    [ -f "$f" ] && sed -n "s#^\([0-9][0-9./]*\).*#route replace throw \1 table $TABLE#p" "$f"
+  done
+} | ip -batch -
+
+for d in $DNS_SERVERS; do ip route replace "$d/32" dev "$IFACE"; done
+
+while ip rule del prio "$PRIO" 2>/dev/null; do :; done
+# Must be "iif <lan>", NOT "from <lan subnet>": the latter also catches the router's own
+# replies to LAN clients (SSH, DNS) and sends them into the tunnel -> you get locked out.
+ip rule add iif "$LAN_IF" table "$TABLE" prio "$PRIO"

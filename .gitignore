@@ -1,0 +1,9 @@
+# real configs and keys never go in git
+*.conf
+!router-files/*.example
+*.key
+*.psk
+vpnctl.env
+secrets/
+out/
+.DS_Store
