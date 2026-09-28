@@ -1,0 +1,8 @@
+{
+	"admin/services/amneziawg3": {
+		"title": "AmneziaWG VPN",
+		"order": 5,
+		"action": { "type": "view", "path": "amneziawg3" },
+		"depends": { "acl": [ "luci-app-amneziawg3" ] }
+	}
+}

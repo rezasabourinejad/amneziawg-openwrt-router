@@ -1,0 +1,12 @@
+{
+	"luci-app-amneziawg3": {
+		"description": "Control the AmneziaWG 3.1 whole-LAN tunnel",
+		"read": {
+			"file": { "/usr/libexec/amneziawg3-status": [ "exec" ] },
+			"ubus": { "file": [ "exec" ], "luci": [ "getInitList" ] }
+		},
+		"write": {
+			"ubus": { "luci": [ "setInitAction" ] }
+		}
+	}
+}

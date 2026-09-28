@@ -27,6 +27,7 @@ with traffic obfuscation, built to get past DPI (Iran, Russia, China…).
 | Split tunnel | All IPv4 prefixes of a country (default **Iran**, from RIPE) go direct via `throw` routes. Pure FIB lookup: no firewall marks, no conntrack; measured **no RTT change**. |
 | DNS fix | Router DNS → 1.1.1.1 *through the tunnel*, so filtered domains (X/Twitter, Discord…) resolve correctly. Falls back to direct when the VPN is off. |
 | Pinned source port | Some ISPs hash their upstream per flow; a fixed `ListenPort` keeps a good path across restarts. |
+| Web page | **LuCI → Services → AmneziaWG VPN**: live status (handshake, tunnel ping, traffic, WAN cable) and On / Off / start-at-boot buttons, from any device, even a phone. |
 | `vpnctl` | `on / off / restart / status` from your laptop over SSH (+ a double-click macOS menu). |
 
 ## Compatibility
@@ -59,10 +60,19 @@ A kernel module only loads on the **exact** kernel it was built for. Find yours 
 ```sh
 ROUTER=root@192.168.1.1 TUNNEL_ADDR=10.8.1.2/32 ./install.sh ./awg1.conf
 # other router:  ... ./install.sh ./awg1.conf ./out/23.05.5-ramips-mt7621
-# options: SPLIT_TUNNEL=0 (everything via VPN), SET_DNS=0 (keep your DNS), SSH_KEY=~/.ssh/key
+# options: SPLIT_TUNNEL=0 (everything via VPN), SET_DNS=0 (keep your DNS), INSTALL_LUCI=0 (no web page),
+#          SSH_KEY=~/.ssh/key
 ```
 
 **5. Control**
+
+From any device on the LAN: open `http://<router-ip>` → **Services → AmneziaWG VPN**. Turn OFF puts the
+whole network back on the plain internet in a second, a handy escape hatch when something is wrong.
+The page only runs a tiny read-only status script while it is open (refresh every 10 s); it has no
+background process and no effect on tunnel traffic. Its rpcd ACL allows only that script and
+start/stop/enable/disable of this one service.
+
+From a laptop:
 
 ```sh
 cp vpnctl.env.example vpnctl.env    # set ROUTER / SSH_KEY once
@@ -111,6 +121,7 @@ awg set awg1 listen-port 40011; sleep 2; ping -c 10 10.8.1.0     # server tunnel
 
 | Symptom | Fix |
 |---|---|
+| no internet at all, VPN or not | Check the web page's *Internet cable (WAN)* row. A loose cable or the wrong port (Google WiFi: the one with the globe icon) looks exactly like a VPN outage. |
 | no handshake | Obfuscation params must match the server **exactly**; peer present on server (`awg show`)? UDP port open on VPS? |
 | ping works, big pages stall | MTU: lower `MTU` in `awg3.env` by 40, `vpnctl restart` (AWG 3.1 padding varies; 1256 is safe). |
 | X/Twitter/Discord don't open, Telegram does | Poisoned DNS: `ip route get 1.1.1.1` on the router must show `dev awg1`. Toggle Wi-Fi on the phone (negative DNS cache). |
