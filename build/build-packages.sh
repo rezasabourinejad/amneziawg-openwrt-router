@@ -12,17 +12,20 @@
 #
 # Versions of the AmneziaWG sources can be overridden:
 #   KMOD_VERSION=3.1.20260906 TOOLS_VERSION=3.1.20260812 ./build/build-packages.sh ...
+# Upstream tags that are not valid opkg versions (e.g. v3.1.20261113-02) go in KMOD_SRC_TAG:
+#   KMOD_VERSION=3.1.20261113.2 KMOD_SRC_TAG=v3.1.20261113-02 ./build/build-packages.sh ...
 set -e
 [ $# -eq 3 ] || { sed -n '2,15p' "$0"; exit 1; }
 VER=$1; TARGET=$2; SUB=$3
-KMOD_VERSION=${KMOD_VERSION:-3.1.20260906}
+KMOD_VERSION=${KMOD_VERSION:-3.1.20261113.2}
+KMOD_SRC_TAG=${KMOD_SRC_TAG:-v3.1.20261113-02}
 TOOLS_VERSION=${TOOLS_VERSION:-3.1.20260812}
 cd "$(dirname "$0")/.."
 OUT="$PWD/out/$VER-$TARGET-$SUB"; mkdir -p "$OUT" "$PWD/out/cache"
 
 docker run --rm --platform linux/amd64 \
   -e VER="$VER" -e TARGET="$TARGET" -e SUB="$SUB" \
-  -e KMOD_VERSION="$KMOD_VERSION" -e TOOLS_VERSION="$TOOLS_VERSION" \
+  -e KMOD_VERSION="$KMOD_VERSION" -e KMOD_SRC_TAG="$KMOD_SRC_TAG" -e TOOLS_VERSION="$TOOLS_VERSION" \
   -v "$OUT":/out -v "$PWD/out/cache":/cache \
   debian:bookworm-slim bash -c '
 set -e
@@ -43,6 +46,8 @@ rm -rf package/kmod-amneziawg package/amneziawg-tools
 cp -r /tmp/awg/kmod-amneziawg /tmp/awg/amneziawg-tools package/
 rm -rf package/kmod-amneziawg/patches package/amneziawg-tools/patches
 sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$KMOD_VERSION/" package/kmod-amneziawg/Makefile
+[ -n "$KMOD_SRC_TAG" ] && sed -i "s/^PKG_SOURCE_VERSION:=.*/PKG_SOURCE_VERSION:=$KMOD_SRC_TAG/" package/kmod-amneziawg/Makefile
+grep -E "^PKG_(VERSION|SOURCE_VERSION)" package/kmod-amneziawg/Makefile
 sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$TOOLS_VERSION/" package/amneziawg-tools/Makefile
 sed -i "s/^PKG_SOURCE_VERSION:=.*/PKG_SOURCE_VERSION:=v\$(PKG_VERSION)/" package/amneziawg-tools/Makefile
 printf "CONFIG_PACKAGE_kmod-amneziawg=m\nCONFIG_PACKAGE_amneziawg-tools=y\n" > .config
