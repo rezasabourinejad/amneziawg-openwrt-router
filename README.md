@@ -117,11 +117,27 @@ ports live, without dropping the tunnel:
 awg set awg1 listen-port 40011; sleep 2; ping -c 10 10.8.1.0     # server tunnel IP (Amnezia: 10.8.1.0)
 ```
 
+### Router clock (routers without an RTC)
+
+Google WiFi and many other routers have no battery-backed clock. After a power cut they boot with a
+stale time (OpenWrt's `sysfixtime` uses the newest file in `/etc`). If the router's DNS goes through a
+tunnel that is not up yet, `ntpd` cannot resolve `pool.ntp.org` and the clock can stay wrong for hours.
+`install.sh` therefore:
+
+- puts Cloudflare NTP **by IP** first (`162.159.200.1`, `162.159.200.123`): reached directly over WAN,
+  no DNS needed; the pools stay as fallback;
+- installs `/etc/hotplug.d/ntp/20-amneziawg-ntp`: when `ntpd` steps the clock and the tunnel has no fresh
+  handshake, it restarts the tunnel.
+
+In our test the AWG server still accepted handshakes from a stale clock, so this is a robustness fix
+(correct logs, TLS on the router, DNS), not a cure for every "no handshake" case.
+
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
 | no internet at all, VPN or not | Check the web page's *Internet cable (WAN)* row. A loose cable or the wrong port (Google WiFi: the one with the globe icon) looks exactly like a VPN outage. |
+| no handshake for hours, nothing changed | Some DPI systems block one UDP flow for a while. Change the source port live: `awg set awg1 listen-port 40003`. |
 | no handshake | Obfuscation params must match the server **exactly**; peer present on server (`awg show`)? UDP port open on VPS? |
 | ping works, big pages stall | MTU: lower `MTU` in `awg3.env` by 40, `vpnctl restart` (AWG 3.1 padding varies; 1256 is safe). |
 | X/Twitter/Discord don't open, Telegram does | Poisoned DNS: `ip route get 1.1.1.1` on the router must show `dev awg1`. Toggle Wi-Fi on the phone (negative DNS cache). |

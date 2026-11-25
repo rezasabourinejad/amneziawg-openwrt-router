@@ -1,0 +1,13 @@
+#!/bin/sh
+# /etc/hotplug.d/ntp/20-amneziawg-ntp
+# WireGuard/AmneziaWG servers reject a handshake whose timestamp is older than the last one they
+# accepted from this peer. After a power cut the router boots with a stale clock (sysfixtime =
+# newest file in /etc), so every handshake is rejected until NTP corrects the clock. When ntpd
+# steps the clock, restart the tunnel if it has no fresh handshake, so it recovers immediately.
+[ "$ACTION" = step ] || exit 0
+ip link show awg1 >/dev/null 2>&1 || exit 0
+hs=$(awg show awg1 latest-handshakes 2>/dev/null | awk '{print $2; exit}')
+if [ -z "$hs" ] || [ "$hs" = 0 ] || [ $(( $(date +%s) - hs )) -gt 180 ]; then
+	logger -t amneziawg3 "clock stepped by ntpd and no fresh handshake: restarting tunnel"
+	/etc/init.d/amneziawg3 restart
+fi
